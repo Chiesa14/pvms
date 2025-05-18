@@ -24,7 +24,7 @@ export const initiatePayment = async (req, res) => {
         }
 
         const payment = await Payment.create({
-            userId: req.user.id,
+            userId: req.user.userId,
             reservationId: reservation.id,
             amount: reservation.amount,
             status: 'pending',

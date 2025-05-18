@@ -19,7 +19,7 @@ export const registerVehicle = async (req, res) => {
 
 export const getMyVehicles = async (req, res) => {
     try {
-        const vehicles = await Vehicle.findAll({ where: { userId: req.user.id } });
+        const vehicles = await Vehicle.findAll({ where: { userId: req.user.userId } });
         res.json(vehicles);
     } catch (error) {
         res.status(500).json({ message: error.message });

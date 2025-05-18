@@ -38,7 +38,7 @@ export const createReservation = async (req, res) => {
         }
 
         const reservation = await Reservation.create({
-            userId: req.user.id,
+            userId: req.user.userId,
             slotId,
             startTime,
             endTime,
@@ -53,7 +53,7 @@ export const createReservation = async (req, res) => {
 export const getUserReservations = async (req, res) => {
     try {
         const reservations = await Reservation.findAll({
-            where: { userId: req.user.id }
+            where: { userId: req.user.userId }
         });
         res.status(200).json(reservations);
     } catch (error) {
@@ -66,7 +66,7 @@ export const cancelReservation = async (req, res) => {
         const reservation = await Reservation.findOne({
             where: {
                 id: req.params.id,
-                userId: req.user.id,
+                userId: req.user.userId,
             }
         });
 
@@ -77,7 +77,7 @@ export const cancelReservation = async (req, res) => {
         reservation.status = 'cancelled';
         await reservation.save();
 
-        // await sendNotification(req.user.id, 'Your reservation was successfully removed!', 'reservation');
+        // await sendNotification(req.user.userId, 'Your reservation was successfully removed!', 'reservation');
 
         res.status(200).json({ message: 'Reservation cancelled successfully' });
     } catch (error) {
