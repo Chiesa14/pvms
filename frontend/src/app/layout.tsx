@@ -1,5 +1,5 @@
 // src/app/layout.tsx
-import "@/app/styles/globals.css";
+import "./globals.css";
 import { Inter } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "sonner";

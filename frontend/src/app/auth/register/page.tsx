@@ -64,13 +64,11 @@ export default function RegisterPage() {
         firstName: data.firstName,
         lastName: data.lastName,
         phoneNumber: data.phoneNumber,
-        address: {
-          street: data.street,
-          city: data.city,
-          state: data.state,
-          postalCode: data.postalCode,
-          country: data.country,
-        },
+        addressStreet: data.street,
+        addressCity: data.city,
+        addressState: data.state,
+        addressPostalCode: data.postalCode,
+        addressCountry: data.country,
       });
 
       if (success) {

@@ -4,12 +4,27 @@ import { createContext, ReactNode, useState } from "react";
 
 type User = {
   id: string;
+  username: string;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  addressStreet: string;
+  addressCity: string;
+  addressState: string;
+  addressPostalCode: string;
+  addressCountry: string;
+  role: "user" | "admin" | "manager"; // Update with your actual roles
+  isVerified: boolean;
+  lastLogin: string; // ISO date string
+  profileImage?: string; // Optional profile image URL
+  createdAt: string; // ISO date string
+  updatedAt: string; // ISO date string
 };
 
 type AuthContextType = {
   user: User | null;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (userData: unknown) => Promise<boolean>;
   verifyOtp: (otp: string, token: string) => Promise<boolean>;
@@ -17,6 +32,7 @@ type AuthContextType = {
 };
 
 export const AuthContext = createContext<AuthContextType>({
+  isAuthenticated: false,
   user: null,
   login: async () => false,
   register: async () => false,
@@ -26,6 +42,7 @@ export const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const isAuthenticated = !!user;
 
   const login = async (email: string, password: string) => {
     try {
@@ -100,7 +117,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, verifyOtp }}>
+    <AuthContext.Provider
+      value={{ user, isAuthenticated, login, register, logout, verifyOtp }}
+    >
       {children}
     </AuthContext.Provider>
   );
