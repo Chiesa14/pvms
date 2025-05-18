@@ -27,7 +27,12 @@ export default function OtpPage() {
 
   useEffect(() => {
     setPendingEmail(sessionStorage.getItem("pendingEmail"));
-  }, []);
+    const authToken = localStorage.getItem("authToken");
+    if (authToken) {
+      toast.info("You are already logged in");
+      router.push("/dashboard");
+    }
+  }, [router]);
 
   const {
     register,

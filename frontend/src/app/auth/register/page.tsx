@@ -17,6 +17,7 @@ import {
   FiHome,
   FiMapPin,
 } from "react-icons/fi";
+import { useEffect } from "react";
 
 const registerSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters"),
@@ -37,6 +38,14 @@ type RegisterFormInputs = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const { register } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    const authToken = localStorage.getItem("authToken");
+    if (authToken) {
+      toast.info("You are already logged in");
+      router.push("/dashboard");
+    }
+  });
 
   const {
     register: formRegister,

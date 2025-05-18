@@ -10,6 +10,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import Link from "next/link";
 import { FiMail, FiLock } from "react-icons/fi";
+import { useEffect } from "react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -23,6 +24,13 @@ type LoginFormInputs = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
+  useEffect(() => {
+    const authToken = localStorage.getItem("authToken");
+    if (authToken) {
+      toast.info("You are already logged in");
+      router.push("/dashboard");
+    }
+  });
 
   const {
     register,
