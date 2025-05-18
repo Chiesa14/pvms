@@ -4,8 +4,9 @@ import User from '../models/User.js';
 // @desc    Get current user profile
 export const getMyProfile = async (req, res) => {
   try {
-    console.log(req.user)
-    const user = await User.findById(req.user.userId).select('-password').select('-_id').select('-__v');
+    const user = await User.findByPk(req.user.userId, {
+      attributes: { exclude: ['password', 'createdAt', 'updatedAt'] },
+    });
     if (!user) return res.status(404).json({ message: 'User not found' });
     res.json(user);
   } catch (err) {
@@ -17,13 +18,15 @@ export const getMyProfile = async (req, res) => {
 export const updateMyProfile = async (req, res) => {
   try {
     const updates = req.body;
-    const user = await User.findByIdAndUpdate(req.user.id, updates, {
-      new: true,
-      runValidators: true,
-    }).select('-password');
-
+    const [updatedRows, [user]] = await User.update(updates, {
+      where: { id: req.user.userId },
+      returning: true,
+      individualHooks: true,
+    });
     if (!user) return res.status(404).json({ message: 'User not found' });
-    res.json(user);
+    const userWithoutPassword = user.get({ plain: true });
+    delete userWithoutPassword.password;
+    res.json(userWithoutPassword);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -32,7 +35,9 @@ export const updateMyProfile = async (req, res) => {
 // @desc    Admin get all users
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.findAll({
+      attributes: { exclude: ['password'] },
+    });
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: 'Server error' });

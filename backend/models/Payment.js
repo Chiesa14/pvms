@@ -1,37 +1,29 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
 
-const paymentSchema = new mongoose.Schema({
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
+const Payment = sequelize.define('Payment', {
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
     },
-    reservation: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Reservation',
-        required: true,
+    reservationId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
     },
     amount: {
-        type: Number,
-        required: true,
+        type: DataTypes.FLOAT,
+        allowNull: false,
     },
     status: {
-        type: String,
-        enum: ['pending', 'completed', 'failed'],
-        default: 'pending',
+        type: DataTypes.STRING,
+        allowNull: false,
     },
-    paymentMethod: {
-        type: String,
-        enum: ['card', 'mobile_money', 'cash'],
-        default: 'card',
-    },
-    transactionId: {
-        type: String,
-        default: '',
+    paymentDate: {
+        type: DataTypes.DATE,
+        allowNull: false,
     },
 }, {
     timestamps: true,
 });
 
-const Payment = mongoose.model('Payment', paymentSchema);
 export default Payment;

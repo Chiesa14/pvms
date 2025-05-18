@@ -13,7 +13,7 @@ const simulatePaymentGateway = async () => {
 export const initiatePayment = async (req, res) => {
     try {
         const { reservationId, paymentMethod } = req.body;
-        const reservation = await Reservation.findById(reservationId);
+        const reservation = await Reservation.findByPk(reservationId);
 
         if (!reservation) {
             return res.status(404).json({ message: 'Reservation not found' });
@@ -23,11 +23,12 @@ export const initiatePayment = async (req, res) => {
             return res.status(400).json({ message: 'Reservation already paid' });
         }
 
-        const payment = new Payment({
-            user: req.user._id,
-            reservation: reservation._id,
+        const payment = await Payment.create({
+            userId: req.user.id,
+            reservationId: reservation.id,
             amount: reservation.amount,
-            paymentMethod,
+            status: 'pending',
+            paymentDate: new Date(),
         });
 
         const paymentResult = await simulatePaymentGateway();
@@ -35,14 +36,14 @@ export const initiatePayment = async (req, res) => {
         if (paymentResult.success) {
             payment.status = 'completed';
             payment.transactionId = paymentResult.transactionId;
+            await payment.save();
 
             reservation.status = 'paid';
             await reservation.save();
         } else {
             payment.status = 'failed';
+            await payment.save();
         }
-
-        await payment.save();
 
         res.status(200).json({
             message: payment.status === 'completed' ? 'Payment successful' : 'Payment failed',
@@ -54,12 +55,11 @@ export const initiatePayment = async (req, res) => {
     }
 };
 
-
 export const verifyPayment = async (req, res) => {
     try {
         const { transactionId } = req.body;
 
-        const payment = await Payment.findOne({ transactionId });
+        const payment = await Payment.findOne({ where: { transactionId } });
 
         if (!payment) {
             return res.status(404).json({ message: 'Payment not found' });

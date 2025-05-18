@@ -2,8 +2,7 @@ import ParkingSlot from '../models/ParkingSlot.js';
 
 export const createSlot = async (req, res) => {
     try {
-        const slot = new ParkingSlot(req.body);
-        await slot.save();
+        const slot = await ParkingSlot.create(req.body);
         res.status(201).json(slot);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -11,24 +10,25 @@ export const createSlot = async (req, res) => {
 };
 
 export const getAllSlots = async (req, res) => {
-    const slots = await ParkingSlot.find().populate('reservedBy', 'username email');
+    const slots = await ParkingSlot.findAll();
     res.json(slots);
 };
 
 export const getSlotById = async (req, res) => {
-    const slot = await ParkingSlot.findById(req.params.id);
+    const slot = await ParkingSlot.findByPk(req.params.id);
     if (!slot) return res.status(404).json({ error: 'Slot not found' });
     res.json(slot);
 };
 
 export const updateSlot = async (req, res) => {
-    const updated = await ParkingSlot.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
+    const [updatedRows, [updated]] = await ParkingSlot.update(req.body, {
+        where: { id: req.params.id },
+        returning: true,
     });
     res.json(updated);
 };
 
 export const deleteSlot = async (req, res) => {
-    await ParkingSlot.findByIdAndDelete(req.params.id);
+    await ParkingSlot.destroy({ where: { id: req.params.id } });
     res.status(204).end();
 };

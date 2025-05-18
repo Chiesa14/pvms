@@ -1,7 +1,7 @@
 // server.js
 import express, { json } from 'express';
 import cors from 'cors';
-import connectDB from './config/db.js';
+import { connectDB } from './config/db.js';
 import setupSwagger from './config/swagger.js';
 import authRoutes from './routes/auth.js';
 import protectedRoutes from './routes/protected.js';

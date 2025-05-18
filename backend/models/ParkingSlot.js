@@ -1,40 +1,34 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
 
-const parkingSlotSchema = new mongoose.Schema(
-  {
-    slotNumber: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-    },
-    zone: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    floor: {
-      type: String,
-      trim: true,
-    },
-    type: {
-      type: String,
-      enum: ['car', 'bike', 'handicap', 'electric'],
-      default: 'car',
-    },
-    isOccupied: {
-      type: Boolean,
-      default: false,
-    },
-    reservedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      default: null,
-    },
+const ParkingSlot = sequelize.define('ParkingSlot', {
+  slotNumber: {
+    type: DataTypes.STRING,
+    allowNull: false,
+    unique: true,
   },
-  { timestamps: true }
-);
-
-const ParkingSlot = mongoose.model('ParkingSlot', parkingSlotSchema);
+  zone: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  floor: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  type: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  isOccupied: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  reservedBy: {
+    type: DataTypes.INTEGER,
+    allowNull: true,
+  },
+}, {
+  timestamps: true,
+});
 
 export default ParkingSlot;

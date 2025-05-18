@@ -1,29 +1,26 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
 
-const vehicleSchema = new mongoose.Schema({
-    owner: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
+const Vehicle = sequelize.define('Vehicle', {
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
     },
     licensePlate: {
-        type: String,
-        required: true,
+        type: DataTypes.STRING,
+        allowNull: false,
         unique: true,
-        trim: true,
     },
-    type: {
-        type: String,
-        enum: ['car', 'motorcycle', 'truck', 'bus'],
-        required: true,
+    model: {
+        type: DataTypes.STRING,
+        allowNull: false,
     },
-    brand: { type: String },
-    model: { type: String },
-    color: { type: String },
+    color: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
 }, {
     timestamps: true,
 });
-
-const Vehicle = mongoose.model('Vehicle', vehicleSchema);
 
 export default Vehicle;

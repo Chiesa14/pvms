@@ -1,16 +1,25 @@
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
 
-const reservationSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    slot: { type: mongoose.Schema.Types.ObjectId, ref: 'ParkingSlot', required: true },
-    vehicleNumber: { type: String, required: true },
-    startTime: { type: Date, required: true },
-    endTime: { type: Date, required: true },
-    status: {
-        type: String,
-        enum: ['active', 'cancelled', 'completed'],
-        default: 'active',
+const Reservation = sequelize.define('Reservation', {
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
     },
-}, { timestamps: true });
+    slotId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+    },
+    startTime: {
+        type: DataTypes.DATE,
+        allowNull: false,
+    },
+    endTime: {
+        type: DataTypes.DATE,
+        allowNull: false,
+    },
+}, {
+    timestamps: true,
+});
 
-export default mongoose.model('Reservation', reservationSchema);
+export default Reservation;

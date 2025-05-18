@@ -1,28 +1,22 @@
 // models/notification.js
-import mongoose from 'mongoose';
+import { DataTypes } from 'sequelize';
+import { sequelize } from '../config/db.js';
 
-const notificationSchema = new mongoose.Schema({
-    user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
+const Notification = sequelize.define('Notification', {
+    userId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
     },
     message: {
-        type: String,
-        required: true,
+        type: DataTypes.STRING,
+        allowNull: false,
     },
-    isRead: {
-        type: Boolean,
-        default: false,
-    },
-    type: {
-        type: String,
-        enum: ['reservation', 'payment', 'admin', 'otp', 'other'],
-        default: 'other',
+    read: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
     },
 }, {
     timestamps: true,
 });
 
-const Notification = mongoose.model('Notification', notificationSchema);
 export default Notification;

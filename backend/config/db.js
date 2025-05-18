@@ -1,18 +1,22 @@
 // config/db.js
-import { connect } from 'mongoose';
+import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
 dotenv.config();
 
+const sequelize = new Sequelize(process.env.POSTGRES_URI, {
+    dialect: 'postgres',
+    logging: false,
+});
 
 const connectDB = async () => {
     try {
-        await connect(process.env.MONGO_URI, {
-        });
-        console.log('MongoDB connected successfully');
+        await sequelize.authenticate();
+        await sequelize.sync(); // Auto-create tables if they don't exist
+        console.log('PostgreSQL connected and models synced successfully');
     } catch (err) {
-        console.error('MongoDB connection error:', err);
+        console.error('PostgreSQL connection error:', err);
         process.exit(1);
     }
 };
 
-export default connectDB;
+export { sequelize, connectDB };
