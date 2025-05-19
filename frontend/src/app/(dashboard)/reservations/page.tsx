@@ -2,18 +2,29 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface Reservation {
   id: string;
   slotId: string;
   startTime: string;
   endTime: string;
-  status: string;
+  status: "pending" | "active" | "completed" | "cancelled" | "revoked";
   userId?: string;
+  user?: {
+    firstName: string;
+    lastName: string;
+    email: string;
+  };
+  slot?: {
+    slotNumber: string;
+    level: number;
+    type: string;
+  };
 }
 
 export default function ReservationsPage() {
@@ -24,12 +35,18 @@ export default function ReservationsPage() {
   const [form, setForm] = useState({ slotId: "", startTime: "", endTime: "" });
   const [submitting, setSubmitting] = useState(false);
   const [slots, setSlots] = useState<any[]>([]);
+  const [filter, setFilter] = useState("all");
 
   // Fetch reservations
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetch("http://localhost:5000/api/reservations", {
+    const endpoint =
+      user.role === "admin"
+        ? "http://localhost:5000/api/reservations/all"
+        : "http://localhost:5000/api/reservations";
+
+    fetch(endpoint, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
       },
@@ -79,14 +96,22 @@ export default function ReservationsPage() {
         },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error("Failed to add reservation");
-      const newReservation = await res.json();
-      setReservations((prev) => [...prev, newReservation]);
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to add reservation");
+      }
+
+      setReservations((prev) => [...prev, data]);
       setForm({ slotId: "", startTime: "", endTime: "" });
       setShowModal(false);
-      toast.success("Reservation requested");
-    } catch {
-      toast.error("Failed to add reservation");
+      toast.success("Reservation requested successfully");
+    } catch (error) {
+      console.error("Reservation error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add reservation"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -102,11 +127,22 @@ export default function ReservationsPage() {
           Authorization: `Bearer ${localStorage.getItem("authToken")}`,
         },
       });
-      if (!res.ok) throw new Error();
-      setReservations((prev) => prev.filter((r) => r.id !== id));
-      toast.success("Reservation cancelled");
-    } catch {
-      toast.error("Failed to cancel reservation");
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to cancel reservation");
+      }
+
+      setReservations((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: "cancelled" } : r))
+      );
+      toast.success(data.message || "Reservation cancelled successfully");
+    } catch (error) {
+      console.error("Cancellation error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to cancel reservation"
+      );
     }
   };
 
@@ -151,6 +187,30 @@ export default function ReservationsPage() {
       toast.success("Reservation revoked");
     } catch {
       toast.error("Failed to revoke reservation");
+    }
+  };
+
+  // Filter reservations based on status
+  const filteredReservations = reservations.filter((r) => {
+    if (filter === "all") return true;
+    return r.status === filter;
+  });
+
+  // Get status badge color
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "completed":
+        return "bg-blue-100 text-blue-800";
+      case "cancelled":
+        return "bg-red-100 text-red-800";
+      case "revoked":
+        return "bg-gray-100 text-gray-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -231,78 +291,95 @@ export default function ReservationsPage() {
         </div>
       )}
 
-      <div className="max-w-4xl mx-auto">
-        <h2 className="text-xl font-semibold mb-4">Reservations</h2>
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-semibold">Reservations</h2>
+          {user?.role === "admin" && (
+            <div className="flex gap-2">
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                className="border rounded px-3 py-2"
+              >
+                <option value="all">All Reservations</option>
+                <option value="pending">Pending</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="revoked">Revoked</option>
+              </select>
+            </div>
+          )}
+        </div>
+
         {loading ? (
           <div>Loading reservations...</div>
-        ) : !Array.isArray(reservations) || reservations.length === 0 ? (
+        ) : !Array.isArray(filteredReservations) ||
+          filteredReservations.length === 0 ? (
           <div className="text-gray-500">No reservations found.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white rounded shadow">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2">Slot</th>
-                  <th className="px-4 py-2">Start Time</th>
-                  <th className="px-4 py-2">End Time</th>
-                  <th className="px-4 py-2">Status</th>
-                  {user?.role === "admin" && (
-                    <th className="px-4 py-2">User ID</th>
-                  )}
-                  <th className="px-4 py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reservations.map((r) => (
-                  <tr key={r.id} className="border-t">
-                    <td className="px-4 py-2">{r.slotId}</td>
-                    <td className="px-4 py-2">
-                      {new Date(r.startTime).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2">
-                      {new Date(r.endTime).toLocaleString()}
-                    </td>
-                    <td className="px-4 py-2 capitalize font-semibold">
-                      {r.status}
-                    </td>
-                    {user?.role === "admin" && (
-                      <td className="px-4 py-2">{r.userId}</td>
+          <div className="grid gap-4">
+            {filteredReservations.map((r) => (
+              <Card key={r.id} className="p-4">
+                <div className="flex flex-col md:flex-row justify-between gap-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">
+                        Slot {r.slot?.slotNumber || r.slotId}
+                      </h3>
+                      <Badge className={getStatusColor(r.status)}>
+                        {r.status}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      <div>Level: {r.slot?.level || "N/A"}</div>
+                      <div>Type: {r.slot?.type || "N/A"}</div>
+                      <div>Start: {new Date(r.startTime).toLocaleString()}</div>
+                      <div>End: {new Date(r.endTime).toLocaleString()}</div>
+                    </div>
+                    {user?.role === "admin" && r.user && (
+                      <div className="text-sm text-gray-500">
+                        <div>
+                          User: {r.user.firstName} {r.user.lastName}
+                        </div>
+                        <div>Email: {r.user.email}</div>
+                      </div>
                     )}
-                    <td className="px-4 py-2 space-x-2">
-                      {/* User actions */}
-                      {user?.role !== "admin" &&
-                        ["pending", "active"].includes(r.status) && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleCancel(r.id)}
-                          >
-                            Cancel
-                          </Button>
-                        )}
-                      {/* Admin actions */}
-                      {user?.role === "admin" && r.status === "pending" && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => handleAcknowledge(r.id)}
-                          >
-                            Acknowledge
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRevoke(r.id)}
-                          >
-                            Revoke
-                          </Button>
-                        </>
+                  </div>
+                  <div className="flex gap-2 self-end">
+                    {/* User actions */}
+                    {user?.role !== "admin" &&
+                      ["pending", "active"].includes(r.status) && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleCancel(r.id)}
+                        >
+                          Cancel
+                        </Button>
                       )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    {/* Admin actions */}
+                    {user?.role === "admin" && r.status === "pending" && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleAcknowledge(r.id)}
+                        >
+                          Acknowledge
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleRevoke(r.id)}
+                        >
+                          Revoke
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
         )}
       </div>

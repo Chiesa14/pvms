@@ -8,6 +8,7 @@ import {
   FiMenu,
   FiUser,
   FiLogOut,
+  FiMapPin,
 } from "react-icons/fi";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -15,45 +16,55 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-const sidebarItems = [
-  {
-    icon: FiHome,
-    title: "Dashboard",
-    href: "/dashboard",
-  },
-  {
-    icon: FiTruck,
-    title: "Vehicles",
-    href: "/vehicles",
-  },
-  {
-    icon: FiCalendar,
-    title: "Reservations",
-    href: "/reservations",
-  },
-  {
-    icon: FiBell,
-    title: "Notifications",
-    href: "/notifications",
-  },
-  {
-    icon: FiUser,
-    title: "Profile",
-    href: "/profile",
-  },
-];
-
 const Sidebar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout();
     toast.success("Logged out successfully");
     router.push("/auth/login");
   };
+
+  const sidebarItems = [
+    {
+      icon: FiHome,
+      title: "Dashboard",
+      href: "/dashboard",
+    },
+    ...(user?.role === "admin"
+      ? [
+          {
+            icon: FiMapPin,
+            title: "Parking Slots",
+            href: "/parking-slots",
+          },
+        ]
+      : [
+          {
+            icon: FiTruck,
+            title: "Vehicles",
+            href: "/vehicles",
+          },
+        ]),
+    {
+      icon: FiCalendar,
+      title: "Reservations",
+      href: "/reservations",
+    },
+    {
+      icon: FiBell,
+      title: "Notifications",
+      href: "/notifications",
+    },
+    {
+      icon: FiUser,
+      title: "Profile",
+      href: "/profile",
+    },
+  ];
 
   return (
     <div
