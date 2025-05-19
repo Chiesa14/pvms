@@ -13,6 +13,7 @@ interface ParkingSlot {
   floor: number;
   status: "available" | "occupied" | "reserved" | "maintenance";
   type: "standard" | "handicap" | "electric" | "compact";
+  reservedBy?: number;
 }
 
 export default function ParkingSlotsPage() {
@@ -86,7 +87,10 @@ export default function ParkingSlotsPage() {
         body: JSON.stringify(form),
       });
 
-      if (!res.ok) throw new Error("Failed to save parking slot");
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.message || "Failed to save parking slot");
+      }
 
       const savedSlot = await res.json();
       if (editingSlot) {
@@ -108,7 +112,10 @@ export default function ParkingSlotsPage() {
       setEditingSlot(null);
       setShowModal(false);
     } catch (error) {
-      toast.error("Failed to save parking slot");
+      console.error("Error saving parking slot:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to save parking slot"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -267,7 +274,7 @@ export default function ParkingSlotsPage() {
                 <div>
                   <div className="font-bold">Slot {slot.slotNumber}</div>
                   <div className="text-sm text-gray-500">
-                    Level {slot.floor} | {slot.type} | {slot.isOccupied}
+                    Level {slot.floor} | {slot.type} | Status: {slot.status}
                   </div>
                 </div>
                 <div className="flex gap-2">
