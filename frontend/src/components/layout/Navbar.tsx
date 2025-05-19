@@ -17,7 +17,6 @@ const Navbar = () => {
   const pathname = usePathname();
   const { user } = useAuth();
   const title = getTitleFromPath(pathname);
-  console.log("user", user);
   
 
   return (

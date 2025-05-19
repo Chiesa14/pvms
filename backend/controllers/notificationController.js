@@ -1,13 +1,31 @@
 // controllers/notificationController.js
 import Notification from '../models/Notification.js';
+import {
+    createPaginationOptions,
+    createWhereClause,
+    createPaginationResponse
+} from '../utils/pagination.js';
 
 export const getUserNotifications = async (req, res) => {
     try {
-        const notifications = await Notification.findAll({
-            where: { userId: req.user.userId },
+        const { page, limit, offset } = createPaginationOptions(req.query);
+
+        const where = {
+            userId: req.user.userId,
+            ...createWhereClause(req.query, {
+                searchFields: ['title', 'message'],
+                statusField: 'isRead'
+            })
+        };
+
+        const { count, rows } = await Notification.findAndCountAll({
+            where,
+            limit,
+            offset,
             order: [['createdAt', 'DESC']]
         });
-        res.json(notifications);
+
+        res.json(createPaginationResponse(count, page, limit, rows));
     } catch (error) {
         console.error('Error fetching notifications:', error);
         res.status(500).json({

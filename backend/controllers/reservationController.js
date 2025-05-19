@@ -3,6 +3,12 @@ import ParkingSlot from '../models/ParkingSlot.js';
 import User from '../models/User.js';
 import sendNotification from '../utils/sendNotification.js';
 import { Op } from 'sequelize';
+import {
+    createPaginationOptions,
+    createWhereClause,
+    createPaginationResponse,
+    createDateRangeFilter
+} from '../utils/pagination.js';
 
 export const createReservation = async (req, res) => {
     try {
@@ -89,10 +95,30 @@ export const createReservation = async (req, res) => {
 
 export const getUserReservations = async (req, res) => {
     try {
-        const reservations = await Reservation.findAll({
-            where: { userId: req.user.userId }
+        const { page, limit, offset } = createPaginationOptions(req.query);
+
+        const where = createWhereClause(req.query, {
+            searchFields: ['status'],
+            statusField: 'status'
         });
-        res.status(200).json(reservations);
+
+        where.userId = req.user.userId;
+
+        const { count, rows } = await Reservation.findAndCountAll({
+            where,
+            limit,
+            offset,
+            order: [['createdAt', 'DESC']],
+            include: [
+                {
+                    model: ParkingSlot,
+                    as: 'slot',
+                    attributes: ['slotNumber', 'floor', 'type', 'status'],
+                }
+            ]
+        });
+
+        res.json(createPaginationResponse(count, page, limit, rows));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -182,7 +208,23 @@ export const getAllReservations = async (req, res) => {
             return res.status(403).json({ message: 'Forbidden' });
         }
 
-        const reservations = await Reservation.findAll({
+        const { page, limit, offset } = createPaginationOptions(req.query);
+
+        const where = createWhereClause(req.query, {
+            searchFields: ['status'],
+            statusField: 'status'
+        });
+
+        // Add date range filter for startTime
+        const dateFilter = createDateRangeFilter(req.query, 'startTime');
+        if (Object.keys(dateFilter).length > 0) {
+            Object.assign(where, dateFilter);
+        }
+
+        const { count, rows } = await Reservation.findAndCountAll({
+            where,
+            limit,
+            offset,
             include: [
                 {
                     model: User,
@@ -198,7 +240,7 @@ export const getAllReservations = async (req, res) => {
             order: [['createdAt', 'DESC']],
         });
 
-        res.status(200).json(reservations);
+        res.json(createPaginationResponse(count, page, limit, rows));
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

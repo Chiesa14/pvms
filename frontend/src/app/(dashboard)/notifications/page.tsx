@@ -3,32 +3,63 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Filter } from "@/components/ui/filter";
+import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/hooks/use-pagination";
 
 interface Notification {
   id: string;
   userId: string;
   message: string;
-  read: boolean;
+  isRead: boolean;
   createdAt: string;
+}
+
+interface PaginatedResponse {
+  data: Notification[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 export default function NotificationsPage() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Fetch notifications
+  const {
+    page,
+    pageSize,
+    search,
+    status,
+    handlePageChange,
+    handlePageSizeChange,
+    handleSearchChange,
+    handleStatusChange,
+  } = usePagination({ defaultPageSize: 10 });
+
+  // Fetch notifications with pagination and filters
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetch("http://localhost:5000/api/notifications", {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: pageSize.toString(),
+    });
+    if (search) params.set("search", search);
+    if (status) params.set("isRead", status);
+    fetch(`http://localhost:5000/api/notifications?${params.toString()}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
       },
     })
       .then((res) => res.json())
-      .then((data) => {
-        setNotifications(Array.isArray(data) ? data : []);
+      .then((data: PaginatedResponse) => {
+        setNotifications(Array.isArray(data.data) ? data.data : []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
         setLoading(false);
       })
       .catch(() => {
@@ -36,7 +67,7 @@ export default function NotificationsPage() {
         setNotifications([]);
         setLoading(false);
       });
-  }, [user]);
+  }, [user, page, pageSize, search, status]);
 
   // Mark notification as read
   const handleMarkAsRead = async (id: string) => {
@@ -52,7 +83,7 @@ export default function NotificationsPage() {
       );
       if (!res.ok) throw new Error();
       setNotifications((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+        prev.map((n) => (n.id === id ? { ...n, isRead: true } : n))
       );
       toast.success("Notification marked as read");
     } catch {
@@ -63,6 +94,18 @@ export default function NotificationsPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <h2 className="text-xl font-semibold mb-4">Notifications</h2>
+      <div className="mb-4">
+        <Filter
+          searchPlaceholder="Search notifications..."
+          onSearchChange={handleSearchChange}
+          statusOptions={[
+            { value: "", label: "All" },
+            { value: "false", label: "Unread" },
+            { value: "true", label: "Read" },
+          ]}
+          onStatusChange={handleStatusChange}
+        />
+      </div>
       {loading ? (
         <div>Loading notifications...</div>
       ) : !Array.isArray(notifications) || notifications.length === 0 ? (
@@ -86,7 +129,7 @@ export default function NotificationsPage() {
                     {new Date(n.createdAt).toLocaleString()}
                   </td>
                   <td className="px-4 py-2">
-                    {n.read ? (
+                    {n.isRead ? (
                       <span className="text-green-600 font-semibold">Read</span>
                     ) : (
                       <span className="text-yellow-600 font-semibold">
@@ -95,7 +138,7 @@ export default function NotificationsPage() {
                     )}
                   </td>
                   <td className="px-4 py-2">
-                    {!n.read && (
+                    {!n.isRead && (
                       <Button size="sm" onClick={() => handleMarkAsRead(n.id)}>
                         Mark as Read
                       </Button>
@@ -107,6 +150,16 @@ export default function NotificationsPage() {
           </table>
         </div>
       )}
+      <div className="mt-6">
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          totalItems={total}
+        />
+      </div>
     </div>
   );
 }

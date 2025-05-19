@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Filter } from "@/components/ui/filter";
+import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/hooks/use-pagination";
 
 interface ParkingSlot {
   id: string;
@@ -14,6 +17,13 @@ interface ParkingSlot {
   status: "available" | "occupied" | "reserved" | "maintenance";
   type: "standard" | "handicap" | "electric" | "compact";
   reservedBy?: number;
+}
+
+interface PaginatedResponse {
+  data: ParkingSlot[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 export default function ParkingSlotsPage() {
@@ -30,6 +40,19 @@ export default function ParkingSlotsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingSlot, setEditingSlot] = useState<ParkingSlot | null>(null);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const {
+    page,
+    pageSize,
+    search,
+    status,
+    handlePageChange,
+    handlePageSizeChange,
+    handleSearchChange,
+    handleStatusChange,
+  } = usePagination({ defaultPageSize: 10 });
 
   // Redirect if not admin
   useEffect(() => {
@@ -38,18 +61,26 @@ export default function ParkingSlotsPage() {
     }
   }, [user, router]);
 
-  // Fetch parking slots
+  // Fetch parking slots with pagination and filters
   useEffect(() => {
     if (!user || user.role !== "admin") return;
     setLoading(true);
-    fetch("http://localhost:5000/api/slots", {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: pageSize.toString(),
+    });
+    if (search) params.set("search", search);
+    if (status) params.set("status", status);
+    fetch(`http://localhost:5000/api/slots?${params.toString()}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("authToken")}`,
       },
     })
       .then((res) => res.json())
-      .then((data) => {
-        setSlots(Array.isArray(data) ? data : []);
+      .then((data: PaginatedResponse) => {
+        setSlots(Array.isArray(data.data) ? data.data : []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
         setLoading(false);
       })
       .catch(() => {
@@ -57,14 +88,14 @@ export default function ParkingSlotsPage() {
         setSlots([]);
         setLoading(false);
       });
-  }, [user]);
+  }, [user, page, pageSize, search, status]);
 
   // Handle form input
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const value =
-      e.target.name === "level" ? parseInt(e.target.value) : e.target.value;
+      e.target.name === "floor" ? parseInt(e.target.value) : e.target.value;
     setForm({ ...form, [e.target.name]: value });
   };
 
@@ -209,7 +240,7 @@ export default function ParkingSlotsPage() {
                 <label className="block text-sm font-medium mb-1">Level</label>
                 <Input
                   type="number"
-                  name="level"
+                  name="floor"
                   value={form.floor}
                   onChange={handleChange}
                   min={1}
@@ -260,6 +291,20 @@ export default function ParkingSlotsPage() {
 
       <div className="max-w-3xl mx-auto">
         <h2 className="text-xl font-semibold mb-4">Parking Slots</h2>
+        <div className="mb-4">
+          <Filter
+            searchPlaceholder="Search by slot number, floor, type..."
+            onSearchChange={handleSearchChange}
+            statusOptions={[
+              { value: "", label: "All Statuses" },
+              { value: "available", label: "Available" },
+              { value: "occupied", label: "Occupied" },
+              { value: "reserved", label: "Reserved" },
+              { value: "maintenance", label: "Maintenance" },
+            ]}
+            onStatusChange={handleStatusChange}
+          />
+        </div>
         {loading ? (
           <div>Loading parking slots...</div>
         ) : !Array.isArray(slots) || slots.length === 0 ? (
@@ -292,6 +337,16 @@ export default function ParkingSlotsPage() {
             ))}
           </div>
         )}
+        <div className="mt-6">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            totalItems={total}
+          />
+        </div>
       </div>
     </div>
   );

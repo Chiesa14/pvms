@@ -1,5 +1,11 @@
 import Payment from '../models/Payment.js';
 import Reservation from '../models/Reservation.js';
+import {
+    createPaginationOptions,
+    createWhereClause,
+    createPaginationResponse,
+    createDateRangeFilter
+} from '../utils/pagination.js';
 
 // Mock payment gateway function
 const simulatePaymentGateway = async () => {
@@ -69,5 +75,88 @@ export const verifyPayment = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Get user's payments
+export const getUserPayments = async (req, res) => {
+    try {
+        const { page, limit, offset } = createPaginationOptions(req.query);
+
+        const where = createWhereClause(req.query, {
+            searchFields: ['status', 'transactionId'],
+            statusField: 'status'
+        });
+
+        where.userId = req.user.userId;
+
+        // Add date range filter for paymentDate
+        const dateFilter = createDateRangeFilter(req.query, 'paymentDate');
+        if (Object.keys(dateFilter).length > 0) {
+            Object.assign(where, dateFilter);
+        }
+
+        const { count, rows } = await Payment.findAndCountAll({
+            where,
+            limit,
+            offset,
+            order: [['paymentDate', 'DESC']],
+            include: [
+                {
+                    model: Reservation,
+                    as: 'reservation',
+                    attributes: ['startTime', 'endTime', 'status'],
+                }
+            ]
+        });
+
+        res.json(createPaginationResponse(count, page, limit, rows));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get all payments (admin only)
+export const getAllPayments = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        const { page, limit, offset } = createPaginationOptions(req.query);
+
+        const where = createWhereClause(req.query, {
+            searchFields: ['status', 'transactionId'],
+            statusField: 'status'
+        });
+
+        // Add date range filter for paymentDate
+        const dateFilter = createDateRangeFilter(req.query, 'paymentDate');
+        if (Object.keys(dateFilter).length > 0) {
+            Object.assign(where, dateFilter);
+        }
+
+        const { count, rows } = await Payment.findAndCountAll({
+            where,
+            limit,
+            offset,
+            order: [['paymentDate', 'DESC']],
+            include: [
+                {
+                    model: Reservation,
+                    as: 'reservation',
+                    attributes: ['startTime', 'endTime', 'status'],
+                },
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['firstName', 'lastName', 'email'],
+                }
+            ]
+        });
+
+        res.json(createPaginationResponse(count, page, limit, rows));
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };

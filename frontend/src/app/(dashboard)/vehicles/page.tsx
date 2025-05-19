@@ -5,6 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Filter } from "@/components/ui/filter";
+import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/hooks/use-pagination";
 
 // Define a Vehicle type
 interface Vehicle {
@@ -14,6 +17,13 @@ interface Vehicle {
   brand?: string;
   model?: string;
   color?: string;
+}
+
+interface PaginatedResponse {
+  data: Vehicle[];
+  total: number;
+  page: number;
+  totalPages: number;
 }
 
 export default function VehiclesPage() {
@@ -30,19 +40,39 @@ export default function VehiclesPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
-  // Fetch vehicles for current user
+  const {
+    page,
+    pageSize,
+    search,
+    handlePageChange,
+    handlePageSizeChange,
+    handleSearchChange,
+  } = usePagination({ defaultPageSize: 10 });
+
+  // Fetch vehicles for current user with pagination and search
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    fetch("http://localhost:5000/api/vehicles", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-      },
-    })
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: pageSize.toString(),
+    });
+    if (search) params.set("search", search);
+    fetch(`http://localhost:5000/api/vehicles?${params.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      }
+    )
       .then((res) => res.json())
-      .then((data) => {
-        setVehicles(Array.isArray(data) ? data : []);
+      .then((data: PaginatedResponse) => {
+        setVehicles(Array.isArray(data.data) ? data.data : []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
         setLoading(false);
       })
       .catch(() => {
@@ -50,7 +80,7 @@ export default function VehiclesPage() {
         setVehicles([]);
         setLoading(false);
       });
-  }, [user]);
+  }, [user, page, pageSize, search]);
 
   // Handle form input
   const handleChange = (
@@ -206,6 +236,12 @@ export default function VehiclesPage() {
 
       <div className="max-w-3xl mx-auto">
         <h2 className="text-xl font-semibold mb-4">My Vehicles</h2>
+        <div className="mb-4">
+          <Filter
+            searchPlaceholder="Search by license plate, brand, model..."
+            onSearchChange={handleSearchChange}
+          />
+        </div>
         {loading ? (
           <div>Loading vehicles...</div>
         ) : !Array.isArray(vehicles) || vehicles.length === 0 ? (
@@ -220,8 +256,7 @@ export default function VehiclesPage() {
                 <div>
                   <div className="font-bold">{v.licensePlate}</div>
                   <div className="text-sm text-gray-500">
-                    {v.type} {v.brand && `| ${v.brand}`}{" "}
-                    {v.model && `| ${v.model}`} {v.color && `| ${v.color}`}
+                    {v.type} {v.brand && `| ${v.brand}`} {v.model && `| ${v.model}`} {v.color && `| ${v.color}`}
                   </div>
                 </div>
                 <Button
@@ -234,6 +269,16 @@ export default function VehiclesPage() {
             ))}
           </div>
         )}
+        <div className="mt-6">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            totalItems={total}
+          />
+        </div>
       </div>
     </div>
   );

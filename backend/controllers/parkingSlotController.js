@@ -1,4 +1,9 @@
 import ParkingSlot from '../models/ParkingSlot.js';
+import {
+    createPaginationOptions,
+    createWhereClause,
+    createPaginationResponse
+} from '../utils/pagination.js';
 
 export const createSlot = async (req, res) => {
     try {
@@ -28,10 +33,21 @@ export const createSlot = async (req, res) => {
 
 export const getAllSlots = async (req, res) => {
     try {
-        const slots = await ParkingSlot.findAll({
+        const { page, limit, offset } = createPaginationOptions(req.query);
+
+        const where = createWhereClause(req.query, {
+            searchFields: ['slotNumber', 'floor', 'type'],
+            statusField: 'status'
+        });
+
+        const { count, rows } = await ParkingSlot.findAndCountAll({
+            where,
+            limit,
+            offset,
             order: [['createdAt', 'DESC']]
         });
-        res.json(slots);
+
+        res.json(createPaginationResponse(count, page, limit, rows));
     } catch (error) {
         res.status(500).json({ error: 'Failed to fetch parking slots' });
     }

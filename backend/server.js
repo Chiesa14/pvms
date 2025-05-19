@@ -15,6 +15,7 @@ import notificationRoutes from './routes/notification.js';
 import adminRoutes from './routes/admin.js';
 import vehicleRoutes from './routes/vehicle.js';
 import analyticsRoutes from './routes/analytics.js';
+import auditLogRoutes from './routes/auditLogRoutes.js';
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

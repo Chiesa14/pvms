@@ -1,5 +1,10 @@
 // controllers/userController.js
 import User from '../models/User.js';
+import {
+  createPaginationOptions,
+  createWhereClause,
+  createPaginationResponse
+} from '../utils/pagination.js';
 
 // @desc    Get current user profile
 export const getMyProfile = async (req, res) => {
@@ -35,10 +40,22 @@ export const updateMyProfile = async (req, res) => {
 // @desc    Admin get all users
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.findAll({
-      attributes: { exclude: ['password'] },
+    const { page, limit, offset } = createPaginationOptions(req.query);
+
+    const where = createWhereClause(req.query, {
+      searchFields: ['name', 'email', 'phone'],
+      statusField: 'status'
     });
-    res.json(users);
+
+    const { count, rows } = await User.findAndCountAll({
+      where,
+      attributes: { exclude: ['password'] },
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']]
+    });
+
+    res.json(createPaginationResponse(count, page, limit, rows));
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }

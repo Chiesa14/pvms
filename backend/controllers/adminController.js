@@ -1,12 +1,31 @@
 import User from '../models/User.js';
 import Reservation from '../models/Reservation.js';
 import Payment from '../models/Payment.js';
+import {
+    createPaginationOptions,
+    createWhereClause,
+    createPaginationResponse
+} from '../utils/pagination.js';
 
 // GET /api/admin/users
 export const getAllUsers = async (req, res) => {
     try {
-        const users = await User.findAll({ attributes: { exclude: ['password'] } });
-        res.status(200).json(users);
+        const { page, limit, offset } = createPaginationOptions(req.query);
+
+        const where = createWhereClause(req.query, {
+            searchFields: ['name', 'email', 'phone'],
+            statusField: 'status'
+        });
+
+        const { count, rows } = await User.findAndCountAll({
+            where,
+            attributes: { exclude: ['password'] },
+            limit,
+            offset,
+            order: [['createdAt', 'DESC']]
+        });
+
+        res.json(createPaginationResponse(count, page, limit, rows));
     } catch (err) {
         res.status(500).json({ message: 'Server error' });
     }

@@ -165,6 +165,46 @@ const options = {
                         },
                     },
                 },
+
+                AuditLog: {
+                    type: 'object',
+                    properties: {
+                        id: { type: 'integer', example: 1 },
+                        tableName: { type: 'string', example: 'users' },
+                        recordId: { type: 'integer', example: 123 },
+                        action: {
+                            type: 'string',
+                            enum: ['INSERT', 'UPDATE', 'DELETE'],
+                            example: 'UPDATE'
+                        },
+                        oldData: {
+                            type: 'object',
+                            example: { name: 'John', email: 'john@example.com' }
+                        },
+                        newData: {
+                            type: 'object',
+                            example: { name: 'John Doe', email: 'john@example.com' }
+                        },
+                        userId: { type: 'integer', example: 456 },
+                        timestamp: {
+                            type: 'string',
+                            format: 'date-time',
+                            example: '2024-03-21T10:30:00Z'
+                        }
+                    }
+                },
+                PaginatedAuditLogs: {
+                    type: 'object',
+                    properties: {
+                        total: { type: 'integer', example: 100 },
+                        page: { type: 'integer', example: 1 },
+                        totalPages: { type: 'integer', example: 10 },
+                        logs: {
+                            type: 'array',
+                            items: { $ref: '#/components/schemas/AuditLog' }
+                        }
+                    }
+                }
             },
             securitySchemes: {
                 bearerAuth: {

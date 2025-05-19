@@ -1,19 +1,41 @@
-import Navbar from "@/components/layout/Navbar";
-import Sidebar from "@/components/layout/Sidebar";
+"use client";
+
+import { useAuth } from "@/hooks/useAuth";
+import { usePathname } from "next/navigation";
+import { Sidebar } from "@/components/sidebar";
+import { MobileNav } from "@/components/mobile-nav";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user } = useAuth();
+  const pathname = usePathname();
+
+  if (!user) {
+    return null;
+  }
+
   return (
-    <div className="flex">
-      <div className="flex h-screen ">
+    <div className="min-h-screen bg-background">
+      {/* Mobile Navigation */}
+      <div className="lg:hidden">
+        <MobileNav />
+      </div>
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <Sidebar />
       </div>
-      <div className="flex flex-col h-screen w-full">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto p-4">{children}</main>
+
+      {/* Main Content */}
+      <div className="lg:pl-64">
+        <main className="min-h-screen p-4 sm:p-6 lg:p-8">
+          <div className="mx-auto max-w-7xl">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

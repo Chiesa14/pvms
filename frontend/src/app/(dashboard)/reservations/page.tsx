@@ -7,6 +7,10 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Filter } from "@/components/ui/filter";
+import { Pagination } from "@/components/ui/pagination";
+import { usePagination } from "@/hooks/use-pagination";
+import { any, unknown } from "zod";
 
 interface Reservation {
   id: string;
@@ -27,6 +31,21 @@ interface Reservation {
   };
 }
 
+interface PaginatedResponse {
+  data: Reservation[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+interface Slot {
+  id: string;
+  slotNumber: string;
+  floor: number;
+  status: "available" | "occupied" | "reserved" | "maintenance";
+  type: "standard" | "handicap" | "electric" | "compact";
+}
+
 export default function ReservationsPage() {
   const { user } = useAuth();
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -34,10 +53,23 @@ export default function ReservationsPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ slotId: "", startTime: "", endTime: "" });
   const [submitting, setSubmitting] = useState(false);
-  const [slots, setSlots] = useState<any[]>([]);
-  const [filter, setFilter] = useState("all");
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [status, setStatus] = useState("");
 
-  // Fetch reservations
+  const {
+    page,
+    pageSize,
+    search,
+    handlePageChange,
+    handlePageSizeChange,
+    handleSearchChange,
+    handleStatusChange,
+  } = usePagination({ defaultPageSize: 10 });
+
+  // Fetch reservations with pagination and filters
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -45,15 +77,24 @@ export default function ReservationsPage() {
       user.role === "admin"
         ? "http://localhost:5000/api/reservations/all"
         : "http://localhost:5000/api/reservations";
-
-    fetch(endpoint, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-      },
-    })
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: pageSize.toString(),
+    });
+    if (search) params.set("search", search);
+    if (status) params.set("status", status);
+    fetch(`${endpoint}?${params.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      }
+    )
       .then((res) => res.json())
-      .then((data) => {
-        setReservations(Array.isArray(data) ? data : []);
+      .then((data: PaginatedResponse) => {
+        setReservations(Array.isArray(data.data) ? data.data : []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 1);
         setLoading(false);
       })
       .catch(() => {
@@ -61,20 +102,42 @@ export default function ReservationsPage() {
         setReservations([]);
         setLoading(false);
       });
-  }, [user]);
+  }, [user, page, pageSize, search, status]);
 
-  // Fetch available slots for reservation form
-  useEffect(() => {
-    if (!showModal) return;
-    fetch("http://localhost:5000/api/slots", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("authToken")}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => setSlots(Array.isArray(data) ? data : []))
-      .catch(() => setSlots([]));
-  }, [showModal]);
+  // Fetch available slots
+  const fetchAvailableSlots = async () => {
+    setLoadingSlots(true);
+    try {
+      const res = await fetch("http://localhost:5000/api/slots?status=available", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+        },
+      });
+      
+      if (!res.ok) {
+        throw new Error("Failed to fetch available slots");
+      }
+      
+      const data = await res.json();
+      if (Array.isArray(data.data)) {
+        setSlots(data.data.filter((slot: { status: string; }) => slot.status === "available"));
+      } else {
+        setSlots([]);
+      }
+    } catch (error) {
+      console.error("Error fetching slots:", error);
+      toast.error("Failed to load available slots");
+      setSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  };
+
+  // Handle opening the modal
+  const handleOpenModal = async () => {
+    setShowModal(true);
+    await fetchAvailableSlots();
+  };
 
   // Handle form input
   const handleChange = (
@@ -190,12 +253,6 @@ export default function ReservationsPage() {
     }
   };
 
-  // Filter reservations based on status
-  const filteredReservations = reservations.filter((r) => {
-    if (filter === "all") return true;
-    return r.status === filter;
-  });
-
   // Get status badge color
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -220,7 +277,7 @@ export default function ReservationsPage() {
       {user?.role !== "admin" && (
         <div className="flex justify-end mb-4">
           <Button
-            onClick={() => setShowModal(true)}
+            onClick={handleOpenModal}
             className="bg-primary text-white"
           >
             + Add Reservation
@@ -234,7 +291,10 @@ export default function ReservationsPage() {
           <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md relative">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl"
-              onClick={() => setShowModal(false)}
+              onClick={() => {
+                setShowModal(false);
+                setSlots([]); // Clear slots when closing modal
+              }}
               aria-label="Close"
             >
               &times;
@@ -249,14 +309,21 @@ export default function ReservationsPage() {
                   onChange={handleChange}
                   className="w-full border rounded px-3 py-2"
                   required
+                  disabled={loadingSlots}
                 >
                   <option value="">Select a slot</option>
                   {slots.map((slot) => (
                     <option key={slot.id} value={slot.id}>
-                      {slot.slotNumber} ({slot.zone}, {slot.floor})
+                      {slot.slotNumber} (Level {slot.floor}, {slot.type})
                     </option>
                   ))}
                 </select>
+                {loadingSlots && (
+                  <p className="text-sm text-gray-500 mt-1">Loading available slots...</p>
+                )}
+                {!loadingSlots && slots.length === 0 && (
+                  <p className="text-sm text-red-500 mt-1">No available slots found</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
@@ -283,7 +350,7 @@ export default function ReservationsPage() {
                   required
                 />
               </div>
-              <Button type="submit" disabled={submitting} className="w-full">
+              <Button type="submit" disabled={submitting || loadingSlots} className="w-full">
                 {submitting ? "Adding..." : "Add Reservation"}
               </Button>
             </form>
@@ -294,32 +361,30 @@ export default function ReservationsPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Reservations</h2>
-          {user?.role === "admin" && (
-            <div className="flex gap-2">
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value)}
-                className="border rounded px-3 py-2"
-              >
-                <option value="all">All Reservations</option>
-                <option value="pending">Pending</option>
-                <option value="active">Active</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="revoked">Revoked</option>
-              </select>
-            </div>
-          )}
+          <div className="flex gap-2">
+            <Filter
+              searchPlaceholder="Search by slot, user, ..."
+              onSearchChange={handleSearchChange}
+              statusOptions={[
+                { value: "", label: "All Statuses" },
+                { value: "pending", label: "Pending" },
+                { value: "active", label: "Active" },
+                { value: "completed", label: "Completed" },
+                { value: "cancelled", label: "Cancelled" },
+                { value: "revoked", label: "Revoked" },
+              ]}
+              onStatusChange={handleStatusChange}
+            />
+          </div>
         </div>
 
         {loading ? (
           <div>Loading reservations...</div>
-        ) : !Array.isArray(filteredReservations) ||
-          filteredReservations.length === 0 ? (
+        ) : !Array.isArray(reservations) || reservations.length === 0 ? (
           <div className="text-gray-500">No reservations found.</div>
         ) : (
           <div className="grid gap-4">
-            {filteredReservations.map((r) => (
+            {reservations.map((r) => (
               <Card key={r.id} className="p-4">
                 <div className="flex flex-col md:flex-row justify-between gap-4">
                   <div className="space-y-2">
@@ -382,6 +447,16 @@ export default function ReservationsPage() {
             ))}
           </div>
         )}
+        <div className="mt-6">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            totalItems={total}
+          />
+        </div>
       </div>
     </div>
   );
