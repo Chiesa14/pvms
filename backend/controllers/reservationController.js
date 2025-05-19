@@ -16,10 +16,14 @@ export const createReservation = async (req, res) => {
             return res.status(400).json({ message: 'End time must be after start time' });
         }
 
-        // Check if slot exists
+        // Check if slot exists and is available
         const existingSlot = await ParkingSlot.findByPk(slotId);
         if (!existingSlot) {
             return res.status(404).json({ message: 'Parking slot not found' });
+        }
+
+        if (existingSlot.status !== 'available') {
+            return res.status(409).json({ message: 'Parking slot is not available' });
         }
 
         // Check for overlapping reservation
@@ -48,6 +52,9 @@ export const createReservation = async (req, res) => {
             status: 'pending',
         });
 
+        // Update slot status to reserved
+        await existingSlot.update({ status: 'reserved' });
+
         // Notify all admins
         try {
             const admins = await User.findAll({ where: { role: 'admin' } });
@@ -65,7 +72,7 @@ export const createReservation = async (req, res) => {
                 {
                     model: ParkingSlot,
                     as: 'slot',
-                    attributes: ['slotNumber', 'floor', 'type', 'zone'],
+                    attributes: ['slotNumber', 'floor', 'type', 'status'],
                 }
             ]
         });
