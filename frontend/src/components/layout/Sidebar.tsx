@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FiHome,
   FiTruck,
@@ -9,6 +9,7 @@ import {
   FiUser,
   FiLogOut,
   FiMapPin,
+  FiX,
 } from "react-icons/fi";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -16,11 +17,36 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-const Sidebar = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+interface SidebarProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+}
+
+const Sidebar = ({ isOpen, setIsOpen }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const { logout, user } = useAuth();
+
+  // Close sidebar on mobile when route changes
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setIsOpen(true);
+      } else {
+        setIsOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [setIsOpen]);
+
+  useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setIsOpen(false);
+    }
+  }, [pathname, setIsOpen]);
 
   const handleLogout = () => {
     logout();
@@ -67,21 +93,36 @@ const Sidebar = () => {
   ];
 
   return (
-    <div
-      className={cn(
-        "relative z-10 transition-all duration-300 ease-in-out flex-shrink-0",
-        isSidebarOpen ? "w-64" : "w-20"
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        />
       )}
-    >
-      <div className="h-full bg-white backdrop-blur-md p-4 flex flex-col border-r border-gray-200">
+
+      <div
+        className={cn(
+          "fixed lg:relative z-50 transition-all duration-300 ease-in-out",
+          "h-screen bg-white backdrop-blur-md p-4 flex flex-col border-r border-gray-200",
+          isOpen ? "w-64" : "w-0 lg:w-20",
+          "transform lg:transform-none",
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          "overflow-hidden lg:overflow-visible",
+          "shadow-lg lg:shadow-none"
+        )}
+      >
+        {/* Toggle Button */}
         <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          onClick={() => setIsOpen(!isOpen)}
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors max-w-fit cursor-pointer text-gray-600"
         >
-          <FiMenu size={24} />
+          {isOpen ? <FiX size={24} /> : <FiMenu size={24} />}
         </button>
 
-        <nav className="mt-8 flex-grow space-y-2">
+        {/* Navigation Items */}
+        <nav className="mt-8 space-y-2">
           {sidebarItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -102,8 +143,10 @@ const Sidebar = () => {
                       isActive && "text-gray-900"
                     )}
                   />
-                  {isSidebarOpen && (
-                    <span className="ml-3 whitespace-nowrap">{item.title}</span>
+                  {isOpen && (
+                    <span className="ml-3 whitespace-nowrap">
+                      {item.title}
+                    </span>
                   )}
                 </div>
               </Link>
@@ -111,22 +154,23 @@ const Sidebar = () => {
           })}
         </nav>
 
-        {/* Logout Button */}
-        <button
-          onClick={handleLogout}
-          className={cn(
-            "flex items-center p-3 mt-auto text-sm font-medium rounded-lg",
-            "hover:bg-red-50 transition-colors text-red-600",
-            " pt-4"
-          )}
-        >
-          <FiLogOut size={20} className="flex-shrink-0" />
-          {isSidebarOpen && (
-            <span className="ml-3 whitespace-nowrap">Logout</span>
-          )}
-        </button>
+        {/* Logout Button pinned to bottom */}
+        <div className="mt-auto pt-4">
+          <button
+            onClick={handleLogout}
+            className={cn(
+              "flex items-center p-3 text-sm font-medium rounded-lg",
+              "hover:bg-red-50 transition-colors text-red-600 w-full"
+            )}
+          >
+            <FiLogOut size={20} className="flex-shrink-0" />
+            {isOpen && (
+              <span className="ml-3 whitespace-nowrap">Logout</span>
+            )}
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 
