@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem("authToken");
         setUser(null);
         setLoading(false);
-        router.replace("/auth/login");
+        router.replace("/");
         return;
       }
       fetch("http://localhost:5000/api/users/me", {

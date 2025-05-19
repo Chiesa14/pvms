@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
@@ -25,13 +27,21 @@ export default function DashboardPage() {
   const [adminStats, setAdminStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const authToken = localStorage.getItem("authToken");
 
   useEffect(() => {
     if (user?.role === "admin") {
       setLoading(true);
-      fetch("http://localhost:5000/api/analytics/dashboard")
+      fetch("http://localhost:5000/api/analytics/dashboard", {
+        method: "GET", // or 'POST' if required
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+      })
         .then((res) => res.json())
         .then((data) => {
+          console.log(data);
           setAdminStats(data);
           setLoading(false);
         })

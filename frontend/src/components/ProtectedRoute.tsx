@@ -15,7 +15,7 @@ export default function ProtectedRoute({
     if (pathname.startsWith("/auth")) return;
     const token = localStorage.getItem("authToken");
     if (!token) {
-      router.replace("/auth/login");
+      router.replace("/");
     }
   }, [router, pathname]);
 
