@@ -40,7 +40,7 @@ export function Filter({
         />
       </div>
       {statusOptions && onStatusChange && (
-        <Select onValueChange={onStatusChange} defaultValue="all">
+        <Select onValueChange={onStatusChange} defaultValue="">
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select status" />
           </SelectTrigger>
@@ -48,7 +48,7 @@ export function Filter({
             {statusOptions.map((option) => (
               <SelectItem 
                 key={option.value} 
-                value={option.value === "" ? "all" : option.value}
+                value={option.value}
               >
                 {option.label}
               </SelectItem>

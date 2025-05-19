@@ -23,6 +23,14 @@ const Reservation = sequelize.define('Reservation', {
         defaultValue: 'pending',
         allowNull: false,
     },
+    vehicleId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: 'Vehicles',
+            key: 'id',
+        },
+    },
 }, {
     timestamps: true,
 });

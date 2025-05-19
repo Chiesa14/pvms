@@ -9,12 +9,14 @@ import {
     createPaginationResponse,
     createDateRangeFilter
 } from '../utils/pagination.js';
+import sendEmail from '../utils/sendEmail.js';
+import Vehicle from '../models/vehicle.js';
 
 export const createReservation = async (req, res) => {
     try {
-        const { slotId, startTime, endTime } = req.body;
+        const { slotId, startTime, endTime, vehicleId } = req.body;
 
-        if (!slotId || !startTime || !endTime) {
+        if (!slotId || !startTime || !endTime || !vehicleId) {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
@@ -56,6 +58,7 @@ export const createReservation = async (req, res) => {
             startTime,
             endTime,
             status: 'pending',
+            vehicleId,
         });
 
         // Update slot status to reserved
@@ -114,6 +117,11 @@ export const getUserReservations = async (req, res) => {
                     model: ParkingSlot,
                     as: 'slot',
                     attributes: ['slotNumber', 'floor', 'type', 'status'],
+                },
+                {
+                    model: Vehicle,
+                    as: 'vehicle',
+                    attributes: ['type', 'licensePlate', 'brand', 'model', 'color'],
                 }
             ]
         });
@@ -173,12 +181,49 @@ export const acknowledgeReservation = async (req, res) => {
         if (req.user.role !== 'admin') {
             return res.status(403).json({ message: 'Forbidden' });
         }
-        const reservation = await Reservation.findByPk(req.params.id);
+        const reservation = await Reservation.findByPk(req.params.id, {
+            include: [
+                { model: User, as: 'user', attributes: ['email', 'firstName', 'lastName'] },
+                { model: ParkingSlot, as: 'slot', attributes: ['slotNumber', 'floor', 'type'] },
+                { model: Vehicle, as: 'vehicle', attributes: ['type', 'licensePlate', 'brand', 'model', 'color'] },
+            ]
+        });
         if (!reservation) return res.status(404).json({ message: 'Reservation not found' });
         reservation.status = 'active';
         await reservation.save();
+
+        // Calculate duration and price
+        const start = new Date(reservation.startTime);
+        const end = new Date(reservation.endTime);
+        const durationHours = Math.ceil((end - start) / (1000 * 60 * 60));
+        const vehicleType = reservation.vehicle?.type || 'car';
+        const priceMap = { motorcycle: 500, bus: 1000, car: 800, truck: 1500 };
+        const pricePerHour = priceMap[vehicleType] || 800;
+        const totalPrice = durationHours * pricePerHour;
+
+        // Send email
+        const emailText = `
+Hello ${reservation.user?.firstName || ''},
+
+Your parking reservation has been approved!
+
+Slot: ${reservation.slot?.slotNumber}
+Vehicle type: ${vehicleType}
+Duration: ${durationHours} hour(s)
+Price per hour: ${pricePerHour}
+Total price: ${totalPrice}
+
+Start: ${start.toLocaleString()}
+End: ${end.toLocaleString()}
+
+Thank you for using our service!
+        `;
+        if (reservation.user?.email) {
+            await sendEmail(reservation.user.email, 'Your Parking Ticket', emailText);
+        }
+
         await sendNotification(reservation.userId, 'Your reservation was acknowledged by admin.', 'reservation');
-        res.json({ message: 'Reservation acknowledged', reservation });
+        res.json({ message: 'Reservation acknowledged', reservation, ticket: { durationHours, vehicleType, pricePerHour, totalPrice } });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -236,6 +281,11 @@ export const getAllReservations = async (req, res) => {
                     as: 'slot',
                     attributes: ['slotNumber', 'floor', 'type'],
                 },
+                {
+                    model: Vehicle,
+                    as: 'vehicle',
+                    attributes: ['type', 'licensePlate', 'brand', 'model', 'color'],
+                }
             ],
             order: [['createdAt', 'DESC']],
         });

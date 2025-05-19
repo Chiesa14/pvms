@@ -3,6 +3,7 @@ import VerificationToken from './VerificationToken.js';
 import Reservation from './Reservation.js';
 import ParkingSlot from './ParkingSlot.js';
 import Notification from './Notification.js';
+import Vehicle from './vehicle.js';
 
 // Define associations
 User.hasMany(VerificationToken, {
@@ -47,10 +48,32 @@ Notification.belongsTo(User, {
     as: 'user'
 });
 
+// Vehicle associations
+User.hasMany(Vehicle, {
+    foreignKey: 'userId',
+    as: 'vehicles'
+});
+
+Vehicle.belongsTo(User, {
+    foreignKey: 'userId',
+    as: 'user'
+});
+
+Vehicle.hasMany(Reservation, {
+    foreignKey: 'vehicleId',
+    as: 'reservations'
+});
+
+Reservation.belongsTo(Vehicle, {
+    foreignKey: 'vehicleId',
+    as: 'vehicle'
+});
+
 export {
     User,
     VerificationToken,
     Reservation,
     ParkingSlot,
-    Notification
+    Notification,
+    Vehicle
 }; 

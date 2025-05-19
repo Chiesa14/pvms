@@ -99,7 +99,7 @@ export default function NotificationsPage() {
           searchPlaceholder="Search notifications..."
           onSearchChange={handleSearchChange}
           statusOptions={[
-            { value: "", label: "All" },
+            { value: "all", label: "All" },
             { value: "false", label: "Unread" },
             { value: "true", label: "Read" },
           ]}

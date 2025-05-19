@@ -31,36 +31,38 @@ export function Pagination({
   totalItems,
 }: PaginationProps) {
   return (
-    <div className="flex items-center justify-between px-2">
-      <div className="flex-1 text-sm text-muted-foreground">
+    <div className="flex flex-col sm:flex-row items-center justify-between px-2 space-y-2 sm:space-y-0">
+      <div className="w-full sm:w-auto text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
         Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalItems)} of {totalItems} items
       </div>
-      <div className="flex items-center space-x-6 lg:space-x-8">
-        <div className="flex items-center space-x-2">
-          <p className="text-sm font-medium">Rows per page</p>
-          <Select
-            value={`${pageSize}`}
-            onValueChange={(value) => onPageSizeChange(Number(value))}
-          >
-            <SelectTrigger className="h-8 w-[70px]">
-              <SelectValue placeholder={pageSize} />
-            </SelectTrigger>
-            <SelectContent side="top">
-              {[10, 20, 30, 40, 50].map((size) => (
-                <SelectItem key={size} value={`${size}`}>
-                  {size}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="flex flex-col sm:flex-row items-center w-full sm:w-auto space-y-2 sm:space-y-0 sm:space-x-6 lg:space-x-8">
+        <div className="flex items-center space-x-2 w-full justify-center sm:w-auto sm:justify-start">
+          <p className="text-xs sm:text-sm font-medium hidden xs:block sm:block">Rows per page</p>
+          <div className="hidden xs:block sm:block">
+            <Select
+              value={`${pageSize}`}
+              onValueChange={(value) => onPageSizeChange(Number(value))}
+            >
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue placeholder={pageSize} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((size) => (
+                  <SelectItem key={size} value={`${size}`}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+        <div className="flex w-full sm:w-[100px] items-center justify-center text-xs sm:text-sm font-medium">
           Page {currentPage} of {totalPages}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center justify-center space-x-2 w-full sm:w-auto">
           <Button
             variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
+            className="hidden lg:flex h-8 w-8 p-0"
             onClick={() => onPageChange(1)}
             disabled={currentPage === 1}
           >
@@ -87,7 +89,7 @@ export function Pagination({
           </Button>
           <Button
             variant="outline"
-            className="hidden h-8 w-8 p-0 lg:flex"
+            className="hidden lg:flex h-8 w-8 p-0"
             onClick={() => onPageChange(totalPages)}
             disabled={currentPage === totalPages}
           >
