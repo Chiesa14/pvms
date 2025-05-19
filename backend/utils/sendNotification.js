@@ -3,7 +3,7 @@ import Notification from '../models/Notification.js';
 
 const sendNotification = async (userId, message, type = 'other') => {
   await Notification.create({
-    user: userId,
+    userId: userId,
     message,
     type,
   });

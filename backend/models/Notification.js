@@ -6,12 +6,21 @@ const Notification = sequelize.define('Notification', {
     userId: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+            model: 'Users',
+            key: 'id'
+        }
     },
     message: {
         type: DataTypes.STRING,
         allowNull: false,
     },
-    read: {
+    type: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'general'
+    },
+    isRead: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
     },

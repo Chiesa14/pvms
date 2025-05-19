@@ -1,5 +1,5 @@
 import express from 'express';
-import { createReservation, getUserReservations, cancelReservation, acknowledgeReservation, revokeReservation } from '../controllers/reservationController.js';
+import { createReservation, getUserReservations, cancelReservation, acknowledgeReservation, revokeReservation, getAllReservations } from '../controllers/reservationController.js';
 import { authenticateToken, authorizeRoles } from '../middleware/authMidleware.js';
 
 const router = express.Router();
@@ -126,5 +126,21 @@ router.patch('/:id/acknowledge', authenticateToken, authorizeRoles('admin'), ack
  *         description: Reservation not found
  */
 router.patch('/:id/revoke', authenticateToken, authorizeRoles('admin'), revokeReservation);
+
+/**
+ * @swagger
+ * /api/reservations/all:
+ *   get:
+ *     summary: Get all reservations (admin only)
+ *     tags: [Reservations]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of all reservations with user and slot details
+ *       403:
+ *         description: Forbidden - Admin access required
+ */
+router.get('/all', authenticateToken, authorizeRoles('admin'), getAllReservations);
 
 export default router;

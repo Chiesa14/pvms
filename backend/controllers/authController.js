@@ -83,7 +83,10 @@ export const verifyEmail = async (req, res) => {
         // Find verification token
         const verificationToken = await VerificationToken.findOne({
             where: { token },
-            include: [{ model: User }]
+            include: [{
+                model: User,
+                as: 'user'
+            }]
         });
 
         if (!verificationToken) {

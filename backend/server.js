@@ -4,6 +4,7 @@ import cors from 'cors';
 import { connectDB } from './config/db.js';
 import setupSwagger from './config/swagger.js';
 import { initializeAdmin } from './config/initAdmin.js';
+import './models/index.js'; // Import models with associations
 import authRoutes from './routes/auth.js';
 import protectedRoutes from './routes/protected.js';
 import userRoutes from './routes/user.js';

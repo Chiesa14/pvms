@@ -49,14 +49,34 @@ export const createReservation = async (req, res) => {
         });
 
         // Notify all admins
-        const admins = await User.findAll({ where: { role: 'admin' } });
-        for (const admin of admins) {
-            await sendNotification(admin.id, `New reservation request from user #${req.user.userId}`, 'reservation');
+        try {
+            const admins = await User.findAll({ where: { role: 'admin' } });
+            for (const admin of admins) {
+                await sendNotification(admin.dataValues.id, `New reservation request from user #${req.user.userId}`, 'reservation');
+            }
+        } catch (notificationError) {
+            console.error('Failed to send notifications:', notificationError);
+            // Don't fail the request if notifications fail
         }
 
-        res.status(201).json(reservation);
+        // Return the created reservation with slot details
+        const createdReservation = await Reservation.findByPk(reservation.id, {
+            include: [
+                {
+                    model: ParkingSlot,
+                    as: 'slot',
+                    attributes: ['slotNumber', 'floor', 'type', 'zone'],
+                }
+            ]
+        });
+
+        res.status(201).json(createdReservation);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Reservation creation error:', error);
+        res.status(500).json({
+            message: 'Error creating reservation',
+            error: error.message
+        });
     }
 };
 
@@ -77,7 +97,14 @@ export const cancelReservation = async (req, res) => {
             where: {
                 id: req.params.id,
                 userId: req.user.userId,
-            }
+            },
+            include: [
+                {
+                    model: ParkingSlot,
+                    as: 'slot',
+                    attributes: ['slotNumber', 'floor', 'type'],
+                }
+            ]
         });
 
         if (!reservation) {
@@ -87,11 +114,23 @@ export const cancelReservation = async (req, res) => {
         reservation.status = 'cancelled';
         await reservation.save();
 
-        await sendNotification(req.user.userId, 'Your reservation was successfully cancelled!', 'reservation');
+        try {
+            await sendNotification(req.user.userId, 'Your reservation was successfully cancelled!', 'reservation');
+        } catch (notificationError) {
+            console.error('Failed to send cancellation notification:', notificationError);
+            // Don't fail the request if notification fails
+        }
 
-        res.status(200).json({ message: 'Reservation cancelled successfully' });
+        res.status(200).json({
+            message: 'Reservation cancelled successfully',
+            reservation
+        });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Cancellation error:', error);
+        res.status(500).json({
+            message: 'Error cancelling reservation',
+            error: error.message
+        });
     }
 };
 
@@ -124,6 +163,35 @@ export const revokeReservation = async (req, res) => {
         await reservation.save();
         await sendNotification(reservation.userId, 'Your reservation was revoked by admin.', 'reservation');
         res.json({ message: 'Reservation revoked', reservation });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Get all reservations (admin only)
+export const getAllReservations = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+
+        const reservations = await Reservation.findAll({
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['firstName', 'lastName', 'email'],
+                },
+                {
+                    model: ParkingSlot,
+                    as: 'slot',
+                    attributes: ['slotNumber', 'floor', 'type'],
+                },
+            ],
+            order: [['createdAt', 'DESC']],
+        });
+
+        res.status(200).json(reservations);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
