@@ -30,6 +30,7 @@ type AuthContextType = {
   register: (userData: unknown) => Promise<boolean>;
   verifyOtp: (otp: string, token: string) => Promise<boolean>;
   logout: () => void;
+  updateUser: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthContextType>({
@@ -39,6 +40,7 @@ export const AuthContext = createContext<AuthContextType>({
   register: async () => false,
   verifyOtp: async () => false,
   logout: () => {},
+  updateUser: async () => {},
 });
 
 function isTokenExpired(token: string): boolean {
@@ -55,6 +57,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
   const isAuthenticated = !!user;
+
+  const updateUser = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token) return;
+    try {
+      const res = await fetch("http://localhost:5000/api/users/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data);
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+    }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
@@ -185,7 +205,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated, login, register, logout, verifyOtp }}
+      value={{
+        user,
+        isAuthenticated,
+        login,
+        register,
+        logout,
+        verifyOtp,
+        updateUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

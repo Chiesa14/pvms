@@ -7,10 +7,13 @@ import {
   FiBell,
   FiMenu,
   FiUser,
+  FiLogOut,
 } from "react-icons/fi";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 const sidebarItems = [
   {
@@ -43,6 +46,14 @@ const sidebarItems = [
 const Sidebar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const pathname = usePathname();
+  const router = useRouter();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    toast.success("Logged out successfully");
+    router.push("/auth/login");
+  };
 
   return (
     <div
@@ -88,6 +99,21 @@ const Sidebar = () => {
             );
           })}
         </nav>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className={cn(
+            "flex items-center p-3 mt-auto text-sm font-medium rounded-lg",
+            "hover:bg-red-50 transition-colors text-red-600",
+            " pt-4"
+          )}
+        >
+          <FiLogOut size={20} className="flex-shrink-0" />
+          {isSidebarOpen && (
+            <span className="ml-3 whitespace-nowrap">Logout</span>
+          )}
+        </button>
       </div>
     </div>
   );
