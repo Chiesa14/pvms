@@ -2,31 +2,31 @@ import { DataTypes } from 'sequelize';
 import { sequelize } from '../config/db.js';
 
 const ParkingSlot = sequelize.define('ParkingSlot', {
-  slotNumber: {
+    slotNumber: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true,
-  },
-  zone: {
+      unique: true,
+    },
+    zone: {
     type: DataTypes.STRING,
     allowNull: true,
-  },
-  floor: {
+    },
+    floor: {
     type: DataTypes.STRING,
     allowNull: true,
-  },
-  type: {
+    },
+    type: {
     type: DataTypes.STRING,
     allowNull: true,
-  },
-  isOccupied: {
+    },
+    isOccupied: {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
-  },
-  reservedBy: {
+    },
+    reservedBy: {
     type: DataTypes.INTEGER,
     allowNull: true,
-  },
+    },
 }, {
   timestamps: true,
 });

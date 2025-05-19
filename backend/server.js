@@ -3,6 +3,7 @@ import express, { json } from 'express';
 import cors from 'cors';
 import { connectDB } from './config/db.js';
 import setupSwagger from './config/swagger.js';
+import { initializeAdmin } from './config/initAdmin.js';
 import authRoutes from './routes/auth.js';
 import protectedRoutes from './routes/protected.js';
 import userRoutes from './routes/user.js';
@@ -17,7 +18,10 @@ import analyticsRoutes from './routes/analytics.js';
 const app = express();
 
 // Connect Database
-connectDB();
+connectDB().then(() => {
+    // Initialize admin user after database connection
+    initializeAdmin();
+});
 
 // Middleware
 app.use(cors());
@@ -37,9 +41,6 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/analytics', analyticsRoutes);
-
-
-
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,5 +1,7 @@
 import Reservation from '../models/Reservation.js';
 import ParkingSlot from '../models/ParkingSlot.js';
+import User from '../models/User.js';
+import sendNotification from '../utils/sendNotification.js';
 import { Op } from 'sequelize';
 
 export const createReservation = async (req, res) => {
@@ -24,6 +26,7 @@ export const createReservation = async (req, res) => {
         const overlapping = await Reservation.findOne({
             where: {
                 slotId,
+                status: 'active',
                 [Op.or]: [
                     {
                         startTime: { [Op.lt]: endTime },
@@ -42,7 +45,14 @@ export const createReservation = async (req, res) => {
             slotId,
             startTime,
             endTime,
+            status: 'pending',
         });
+
+        // Notify all admins
+        const admins = await User.findAll({ where: { role: 'admin' } });
+        for (const admin of admins) {
+            await sendNotification(admin.id, `New reservation request from user #${req.user.userId}`, 'reservation');
+        }
 
         res.status(201).json(reservation);
     } catch (error) {
@@ -77,9 +87,43 @@ export const cancelReservation = async (req, res) => {
         reservation.status = 'cancelled';
         await reservation.save();
 
-        // await sendNotification(req.user.userId, 'Your reservation was successfully removed!', 'reservation');
+        await sendNotification(req.user.userId, 'Your reservation was successfully cancelled!', 'reservation');
 
         res.status(200).json({ message: 'Reservation cancelled successfully' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Admin: acknowledge reservation
+export const acknowledgeReservation = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const reservation = await Reservation.findByPk(req.params.id);
+        if (!reservation) return res.status(404).json({ message: 'Reservation not found' });
+        reservation.status = 'active';
+        await reservation.save();
+        await sendNotification(reservation.userId, 'Your reservation was acknowledged by admin.', 'reservation');
+        res.json({ message: 'Reservation acknowledged', reservation });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// Admin: revoke reservation
+export const revokeReservation = async (req, res) => {
+    try {
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({ message: 'Forbidden' });
+        }
+        const reservation = await Reservation.findByPk(req.params.id);
+        if (!reservation) return res.status(404).json({ message: 'Reservation not found' });
+        reservation.status = 'revoked';
+        await reservation.save();
+        await sendNotification(reservation.userId, 'Your reservation was revoked by admin.', 'reservation');
+        res.json({ message: 'Reservation revoked', reservation });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

@@ -1,6 +1,6 @@
 import express from 'express';
-import { createReservation, getUserReservations, cancelReservation } from '../controllers/reservationController.js';
-import { authenticateToken } from '../middleware/authMidleware.js';
+import { createReservation, getUserReservations, cancelReservation, acknowledgeReservation, revokeReservation } from '../controllers/reservationController.js';
+import { authenticateToken, authorizeRoles } from '../middleware/authMidleware.js';
 
 const router = express.Router();
 
@@ -76,5 +76,55 @@ router.get('/', authenticateToken, getUserReservations);
  *         description: Reservation not found
  */
 router.delete('/:id', authenticateToken, cancelReservation);
+
+/**
+ * @swagger
+ * /api/reservations/{id}/acknowledge:
+ *   patch:
+ *     summary: Admin acknowledge (approve) a reservation
+ *     tags: [Reservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Reservation ID
+ *     responses:
+ *       200:
+ *         description: Reservation acknowledged
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Reservation not found
+ */
+router.patch('/:id/acknowledge', authenticateToken, authorizeRoles('admin'), acknowledgeReservation);
+
+/**
+ * @swagger
+ * /api/reservations/{id}/revoke:
+ *   patch:
+ *     summary: Admin revoke (reject) a reservation
+ *     tags: [Reservations]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Reservation ID
+ *     responses:
+ *       200:
+ *         description: Reservation revoked
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Reservation not found
+ */
+router.patch('/:id/revoke', authenticateToken, authorizeRoles('admin'), revokeReservation);
 
 export default router;

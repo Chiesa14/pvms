@@ -1,5 +1,5 @@
 // utils/sendNotification.js
-import Notification from '../models/notification.js';
+import Notification from '../models/Notification.js';
 
 const sendNotification = async (userId, message, type = 'other') => {
   await Notification.create({

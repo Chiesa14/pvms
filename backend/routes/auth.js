@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, verifyOtp } from '../controllers/authController.js';
+import { registerUser, loginUser, verifyOtp, verifyEmail } from '../controllers/authController.js';
 
 const router = express.Router();
 
@@ -59,7 +59,6 @@ router.post('/register', registerUser);
  */
 router.post('/login', loginUser);
 
-
 /**
  * @swagger
  * /api/auth/verify-otp:
@@ -90,5 +89,20 @@ router.post('/login', loginUser);
  */
 router.post('/verify-otp', verifyOtp);
 
+/**
+ * @swagger
+ * /api/auth/verify-email:
+ *   get:
+ *     summary: Verify email
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid or expired verification link
+ *       500:
+ *         description: Server error
+ */
+router.get('/verify-email', verifyEmail);
 
 export default router;
